@@ -1,5 +1,6 @@
 package cau.cse.capstone.blindaid.Main;
 
+
 import android.Manifest;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
@@ -14,9 +15,15 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 
+import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
+import android.widget.TextView;
+
+
 import cau.cse.capstone.blindaid.R;
 
 public class MainActivity extends AppCompatActivity {
+
     private TextureView mCameraTextureView;
     private Preview mPreview;
     private Intent i;
@@ -27,10 +34,12 @@ public class MainActivity extends AppCompatActivity {
     static final int REQUEST_CAMERA = 1;
     private static final int RESULT_SPEECH = 1000;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         //Speech to Text
         while(sst_result.equals("")) {
             i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
@@ -94,3 +103,4 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 }
+
