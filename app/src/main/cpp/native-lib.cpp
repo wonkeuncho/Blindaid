@@ -7,6 +7,7 @@ Java_cau_cse_capstone_blindaid_Camera_MainActivity_stringFromJNI(JNIEnv *env, jo
     // TODO
 
 
+    const char *returnValue;
     return env->NewStringUTF(returnValue);
 }
 

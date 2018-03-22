@@ -1,106 +1,162 @@
 package cau.cse.capstone.blindaid.Main;
 
-
 import android.Manifest;
 import android.app.Activity;
-import android.content.ActivityNotFoundException;
-import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
-import android.speech.RecognizerIntent;
-import android.support.v7.app.AppCompatActivity;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.util.Log;
-import android.view.TextureView;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.SurfaceView;
+import android.view.WindowManager;
 import android.widget.Toast;
 
-import java.util.ArrayList;
-
-import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
-import android.widget.TextView;
-
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraBridgeViewBase;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
+import org.opencv.core.Mat;
 
 import cau.cse.capstone.blindaid.R;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity implements CvCameraViewListener2 {
+    private static final String TAG = "OCVSample::Activity";
+    private CameraBridgeViewBase mOpenCvCameraView;
+    private boolean mIsJavaCamera = true;
+    private MenuItem mItemSwitchCamera = null;
 
-    private TextureView mCameraTextureView;
-    private Preview mPreview;
-    private Intent i;
-    private String sst_result = "";
-
-    Activity mainActivity = this;
-    private static final String TAG = "MAINACTIVITY";
-    static final int REQUEST_CAMERA = 1;
-    private static final int RESULT_SPEECH = 1000;
-
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        //Speech to Text
-        while(sst_result.equals("")) {
-            i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-            i.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
-            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR");
-            i.putExtra(RecognizerIntent.EXTRA_PROMPT, "Please speak word");
-
-            try {
-                startActivityForResult(i, RESULT_SPEECH);
-            } catch (ActivityNotFoundException e) {
-                Toast.makeText(getApplicationContext(), "No support speech to text", Toast.LENGTH_LONG).show();
-                e.getStackTrace();
-            }
-        }
-        //Display Preview
-        mCameraTextureView = (TextureView) findViewById(R.id.cameraTextureView);
-        mPreview = new Preview(this, mCameraTextureView);
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode) {
-            case REQUEST_CAMERA:
-                for (int i = 0; i < permissions.length; i++) {
-                    String permission = permissions[i];
-                    int grantResult = grantResults[i];
-                    if (permission.equals(Manifest.permission.CAMERA)) {
-                        if(grantResult == PackageManager.PERMISSION_GRANTED) {
-                            mCameraTextureView = (TextureView) findViewById(R.id.cameraTextureView);
-                            mPreview = new Preview(mainActivity, mCameraTextureView);
-                            Log.d(TAG,"mPreview set");
-                        } else {
-                            Toast.makeText(this,"Should have camera permission to run", Toast.LENGTH_LONG).show();
-                            finish();
-                        }
-                    }
+    private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
+        @Override
+        public void onManagerConnected(int status) {
+            switch (status) {
+                case LoaderCallbackInterface.SUCCESS: {
+                    Log.i(TAG, "OpenCV loaded successfully");
+                    mOpenCvCameraView.enableView();
                 }
                 break;
+                default: {
+                    super.onManagerConnected(status);
+                }
+                break;
+            }
+        }
+    };
+
+    public MainActivity() {
+        Log.i(TAG, "Instantiated new " + this.getClass());
+    }
+
+    /**
+     * Called when the activity is first created.
+     */
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        grantCameraPermission();
+
+        Log.i(TAG, "called onCreate");
+        super.onCreate(savedInstanceState);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        setContentView(R.layout.activity_main);
+
+
+        if (mIsJavaCamera)
+            mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.tutorial1_activity_java_surface_view);
+
+        mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
+        mOpenCvCameraView.setCvCameraViewListener(this);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
+    }
+
+    public void onDestroy() {
+        super.onDestroy();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        Log.i(TAG, "called onCreateOptionsMenu");
+        mItemSwitchCamera = menu.add("Toggle Native/Java camera");
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        String toastMesage = new String();
+        Log.i(TAG, "called onOptionsItemSelected; selected item: " + item);
+
+        if (item == mItemSwitchCamera) {
+            mOpenCvCameraView.setVisibility(SurfaceView.GONE);
+            mIsJavaCamera = !mIsJavaCamera;
+
+            if (mIsJavaCamera) {
+                mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.tutorial1_activity_java_surface_view);
+                toastMesage = "Java Camera";
+            }
+
+            mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
+            mOpenCvCameraView.setCvCameraViewListener(this);
+            mOpenCvCameraView.enableView();
+            Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
+            toast.show();
+        }
+        return true;
+    }
+
+    public void onCameraViewStarted(int width, int height) {
+        
+    }
+
+    public void onCameraViewStopped() {
+
+    }
+
+    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
+        return inputFrame.rgba();
+    }
+
+    private boolean grantCameraPermission() {
+        if (Build.VERSION.SDK_INT >= 23) {
+            if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                Log.v(TAG, "Permission is granted");
+                return true;
+            } else {
+                Log.v(TAG, "Permission is revoked");
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 1);
+                return false;
+            }
+        } else {
+            Toast.makeText(this, "CAMERA Permission is Grant", Toast.LENGTH_SHORT).show();
+            Log.d(TAG, "CAMERA Permission is Grant ");
+            return true;
         }
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        mPreview.onResume();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        mPreview.onPause();
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if(resultCode == RESULT_OK && (requestCode == RESULT_SPEECH)){
-            ArrayList<String> sstResult = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-            sst_result = sstResult.get(0);
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (Build.VERSION.SDK_INT >= 23) {
+            if(grantResults[0]== PackageManager.PERMISSION_GRANTED){
+                Log.v(TAG,"Permission: "+permissions[0]+ "was "+grantResults[0]);
+                //resume tasks needing this permission
+            }
         }
     }
 }
-
