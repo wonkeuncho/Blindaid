@@ -33,16 +33,17 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
         <activity
-            android:name=".Main.MainActivity"
-            android:configChanges="keyboardHidden|orientation"
-            android:screenOrientation="landscape">
+            android:name=".Main.VoiceActivity"
+            android:theme="@style/Theme.AppCompat.Light">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".Main.VoiceActivity"></activity>
+        <activity
+            android:name=".Main.MainActivity"
+            android:configChanges="keyboardHidden|orientation"
+            android:screenOrientation="landscape"></activity>
     </application>
 
 </manifest>

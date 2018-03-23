@@ -29,6 +29,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     private CameraBridgeViewBase mOpenCvCameraView;
     private boolean mIsJavaCamera = true;
     private MenuItem mItemSwitchCamera = null;
+    private String speechtotext;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -50,13 +51,13 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     public MainActivity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
-
     /**
      * Called when the activity is first created.
      */
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        grantCameraPermission();
+        //grantCameraPermission();
+        speechtotext = getIntent().getExtras().getString("Text");
 
         Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
