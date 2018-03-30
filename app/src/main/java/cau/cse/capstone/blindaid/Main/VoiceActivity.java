@@ -5,9 +5,12 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.speech.RecognizerIntent;
+import android.speech.tts.TextToSpeech;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
@@ -27,6 +30,10 @@ public class VoiceActivity extends Activity {
     private TextView txtSpeechInput;
     private ImageButton btnSpeak;
     private final int REQ_CODE_SPEECH_INPUT = 100;
+    private final int REQ_CODE_CHECK_SPEECH = 101;
+    private MediaPlayer mMediaPlayer;
+    private TextToSpeech tts;
+    private String answer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,16 +43,28 @@ public class VoiceActivity extends Activity {
 
         txtSpeechInput = (TextView) findViewById(R.id.txtSpeechInput);
         btnSpeak = (ImageButton) findViewById(R.id.btnSpeak);
+        tts = new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if(status != TextToSpeech.ERROR) {
+                    tts.setLanguage(Locale.ENGLISH);
+                }
+            }
+        });
 
-        // hide the action bar
-//        getActionBar().hide();
+        // Set Media File to MediaPlayer
+        mMediaPlayer = MediaPlayer.create(this, R.raw.tellmewhatyouwant);
 
+        // Set OnClickListener on btnSpeak
         btnSpeak.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 promptSpeechInput();
             }
         });
+
+        // Auto Start
+        letUserSaying();
     }
 
     /**
@@ -80,10 +99,52 @@ public class VoiceActivity extends Activity {
                             .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
                     txtSpeechInput.setText(result.get(0));
 
-                    Intent i = new Intent(getApplicationContext(), MainActivity.class);
-                    i.putExtra("text", txtSpeechInput.getText().toString());
-                    startActivity(i);
-                    finish();
+                    // Ask user to Check the text you want to find
+                    tts.speak("You said" + txtSpeechInput.getText().toString() + "Right?" +
+                            "Please say yes or no", TextToSpeech.QUEUE_ADD, null);
+
+                    // Speech Recognition( Delay 1.5s )
+                    new Handler().postDelayed(new Runnable() {
+                        @Override public void run() {
+                            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+                            intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
+                                    getString(R.string.speech_prompt));
+                            try {
+                                startActivityForResult(intent, REQ_CODE_CHECK_SPEECH);
+                            } catch (ActivityNotFoundException a) {
+                                Toast.makeText(getApplicationContext(),
+                                        getString(R.string.speech_not_supported),
+                                        Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    }, 3000);
+                }
+                break;
+            }
+            case REQ_CODE_CHECK_SPEECH: {
+                if (resultCode == RESULT_OK && null != data) {
+                    ArrayList<String> result = data
+                            .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                    answer = result.get(0).toString();
+                    System.out.println(answer);
+                    if(checkSpeech(answer) == true){
+                        // Release resource
+                        mMediaPlayer.release();
+                        tts.shutdown();
+
+                        // Start MainActivity
+                        Intent i = new Intent(this, MainActivity.class);
+                        i.putExtra("Text", txtSpeechInput.getText().toString());
+                        startActivity(i);
+                        finish();
+                    }
+                    else
+                    {
+                        letUserSaying();
+                    }
                 }
                 break;
             }
@@ -98,12 +159,11 @@ public class VoiceActivity extends Activity {
     }
 
     private boolean grantPermission() {
-
         if (Build.VERSION.SDK_INT >= 23) {
-
             if ((checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
                     && (checkSelfPermission(Manifest.permission.INTERNET) == PackageManager.PERMISSION_GRANTED)
-                    && (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)) {
+                    && (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+                    && (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)) {
                 Log.v(TAG, "Permission is granted");
                 return true;
             } else {
@@ -126,5 +186,23 @@ public class VoiceActivity extends Activity {
                 //resume tasks needing this permission
             }
         }
+    }
+
+    public boolean checkSpeech(String answer){
+        // if say yes
+        if(answer.equals("yes"))
+            return true;
+        // if say no or anything
+        else
+            return false;
+    }
+    public void letUserSaying(){
+        mMediaPlayer.start();
+        // Speech Recognition(Auto Click Button using performClick() method)
+        new Handler().postDelayed(new Runnable() {
+            @Override public void run() {
+                btnSpeak.performClick();
+            }
+        }, 2000);
     }
 }
