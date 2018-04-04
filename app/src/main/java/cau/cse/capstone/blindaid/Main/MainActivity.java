@@ -159,7 +159,26 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
         }
 
         // Processing Frame which is converted to bitmap ARGB_9999 format
+        Canvas canvas = new Canvas(bmp);
+        Paint paint = new Paint();
+        Paint paintText = new Paint();
+        RectF rectF = new RectF(300, 300, 600, 600);
+        android.graphics.Rect bounds = new android.graphics.Rect();
+        String word = "Wallet";
 
+        paint.setColor(Color.RED);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(7);
+        paint.setStrokeCap(Paint.Cap.ROUND);
+        paint.setAntiAlias(true);
+        canvas.drawRoundRect(rectF, 30, 30, paint);
+        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
+
+
+        paintText.setColor(Color.BLUE);
+        paintText.setTextSize(50);
+        paintText.getTextBounds(word, 0, word.length(), bounds);
+        canvas.drawText(word,rectF.centerX(),rectF.top-15, paintText);
 
         Utils.bitmapToMat(bmp, matResult);
         return matResult;
