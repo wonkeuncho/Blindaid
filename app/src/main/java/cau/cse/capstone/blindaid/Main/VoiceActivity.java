@@ -20,6 +20,8 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.opencv.core.Mat;
+
 import java.util.ArrayList;
 import java.util.Locale;
 
@@ -34,6 +36,9 @@ public class VoiceActivity extends Activity {
     private MediaPlayer mMediaPlayer;
     private TextToSpeech tts;
     private String answer;
+
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
