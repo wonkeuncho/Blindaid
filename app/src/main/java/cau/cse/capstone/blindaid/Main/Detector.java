@@ -3,8 +3,8 @@ package cau.cse.capstone.blindaid.Main;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
+import android.graphics.RectF;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.util.Size;
 import android.view.Surface;
 import android.view.WindowManager;
@@ -51,8 +51,7 @@ public class Detector {
     int previewWidth = 0;
     int previewHeight = 0;
 
-    private Handler handler;
-    private HandlerThread handlerThread;
+    Handler handler = null;
 
     public Detector() {
     }
@@ -89,10 +88,10 @@ public class Detector {
 
         cropToFrameTransform = new Matrix();
         frameToCropTransform.invert(cropToFrameTransform);
+    }
 
-        handlerThread = new HandlerThread("inference");
-        handlerThread.start();
-        handler = new Handler(handlerThread.getLooper());
+    public void setHandler(Handler handler){
+        this.handler = handler;
     }
 
     public void processImage(){
@@ -121,6 +120,15 @@ public class Detector {
                     public void run() {
                         final List<Classifier.Recognition> results
                                 = detector.recognizeImage(croppedBitmap);
+
+                        for(final Classifier.Recognition result : results){
+                            final RectF location = result.getLocation();
+                            if(location != null && result.getConfidence() >= MINIMUM_CONFIDENCE_TF_OD_API){
+                                /**TODO
+                                 * location의 위치를 이용하여 네모 그리기
+                                 */
+                            }
+                        }
 
                     }
                 }
