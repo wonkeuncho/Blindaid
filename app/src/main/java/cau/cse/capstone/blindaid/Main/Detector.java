@@ -2,6 +2,7 @@ package cau.cse.capstone.blindaid.Main;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.os.Handler;
@@ -11,6 +12,7 @@ import android.view.WindowManager;
 import android.widget.Toast;
 
 import java.io.IOException;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -41,7 +43,7 @@ public class Detector {
     private Bitmap rgbFrameBitmap = null;
     private Bitmap croppedBitmap = null;
 
-    private boolean computingDetection = false;
+    public boolean computingDetection = false;
 
     private Matrix frameToCropTransform;
     private Matrix cropToFrameTransform;
@@ -94,7 +96,7 @@ public class Detector {
         this.handler = handler;
     }
 
-    public void processImage(){
+    public void processImage(Bitmap rgbFrameBitmap){
         if(computingDetection){
             /**TODO
              * 이전 프레임의 처리가 아직 끝나지 않았을 때
@@ -104,15 +106,8 @@ public class Detector {
         }
         computingDetection = true;
 
-        /**TODO
-         * OpenCV 로부터 얻은 Mat Frame을 rgbFrameBitmap에 저장
-         * rgbFrameBitmap.setPixels(getRgbBytes(), 0, previewWidth, 0, 0, previewWidth, previewHeight);
-         **/
-
-        /**TODO
-         * rgbFrameBitmap을 croppedBitmap으로 Transform하여 저장
-         * frameToCropTransform
-         **/
+        final Canvas canvas = new Canvas(croppedBitmap);
+        canvas.drawBitmap(rgbFrameBitmap, frameToCropTransform, null);
 
         runInBackground(
                 new Runnable() {
@@ -121,15 +116,23 @@ public class Detector {
                         final List<Classifier.Recognition> results
                                 = detector.recognizeImage(croppedBitmap);
 
+                        final List<Classifier.Recognition> mappedRecognitions =
+                                new LinkedList<Classifier.Recognition>();
+
                         for(final Classifier.Recognition result : results){
                             final RectF location = result.getLocation();
                             if(location != null && result.getConfidence() >= MINIMUM_CONFIDENCE_TF_OD_API){
                                 /**TODO
                                  * location의 위치를 이용하여 네모 그리기
                                  */
+                                cropToFrameTransform.mapRect(location);
+                                result.setLocation(location);
+                                mappedRecognitions.add(result);
                             }
                         }
 
+                        TensorFlowObjectDetectionAPIModel.setResults(mappedRecognitions);
+                        computingDetection = false;
                     }
                 }
         );

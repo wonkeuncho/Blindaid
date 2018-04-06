@@ -17,6 +17,7 @@ import android.os.HandlerThread;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
+import android.util.Size;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SurfaceView;
@@ -31,6 +32,8 @@ import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 
+import java.util.List;
+
 import cau.cse.capstone.blindaid.R;
 
 public class MainActivity extends Activity implements CvCameraViewListener2 {
@@ -42,6 +45,10 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     private Mat matInput;
     private Mat matResult;
     private Mat matLegacy;
+
+    private Size previewSize;
+    private int rotation;
+    private Detector detector;
 
     private Handler handler;
     private HandlerThread handlerThread;
@@ -107,10 +114,6 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     public void onResume() {
         super.onResume();
         OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
-
-        handlerThread = new HandlerThread("inference");
-        handlerThread.start();
-        handler = new Handler(handlerThread.getLooper());
     }
 
     public void onDestroy() {
@@ -150,7 +153,17 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     }
 
     public void onCameraViewStarted(int width, int height) {
-        
+        previewSize = new Size(width, height);
+        Log.i("previewSize_H : ", previewSize.getHeight() + "");
+        Log.i("previewSize_W : ", previewSize.getWidth() + "");
+        rotation = (int)mOpenCvCameraView.getRotation();
+        detector = new Detector(getApplicationContext(), previewSize, rotation);
+
+        handlerThread = new HandlerThread("inference");
+        handlerThread.start();
+        handler = new Handler(handlerThread.getLooper());
+
+        detector.setHandler(handler);
     }
 
     public void onCameraViewStopped() {
@@ -161,7 +174,9 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
 
         matInput = inputFrame.rgba();
+
         if ( matResult != null ) matResult.release();
+
         matResult = new Mat(matInput.rows(), matInput.cols(), matInput.type());
 
         Bitmap bmp = Bitmap.createBitmap(matInput.cols(), matInput.rows(), Bitmap.Config.ARGB_8888);
@@ -174,37 +189,55 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
             return null;
         }
 
-        // Processing Frame which is converted to bitmap ARGB_9999 format
-        Canvas canvas = new Canvas(bmp);
-        Paint paint = new Paint();
-        Paint paintText = new Paint();
-        RectF rectF = new RectF(300, 300, 600, 600);
-        android.graphics.Rect bounds = new android.graphics.Rect();
-        String word = "Wallet";
-
-        paint.setColor(Color.RED);
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(7);
-        paint.setStrokeCap(Paint.Cap.ROUND);
-        paint.setAntiAlias(true);
-        canvas.drawRoundRect(rectF, 30, 30, paint);
-        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
-
-
-        paintText.setColor(Color.BLUE);
-        paintText.setTextSize(50);
-        paintText.getTextBounds(word, 0, word.length(), bounds);
-        canvas.drawText(word,rectF.centerX(),rectF.top-15, paintText);
+        detector.processImage(bmp);
 
         if(matResult != null){
-            Utils.bitmapToMat(bmp, matResult);
+            Utils.bitmapToMat(drawRect(bmp), matResult);
             matLegacy = matResult;
             matResult = null;
         }
         return matLegacy;
     }
 
+    private Bitmap drawRect(Bitmap bmp){
+        // Processing Frame which is converted to bitmap ARGB_9999 format
+        Canvas canvas = new Canvas(bmp);
+        Paint paint = new Paint();
+        Paint paintText = new Paint();
+        android.graphics.Rect bounds = new android.graphics.Rect();
+        paint.setColor(Color.RED);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(7);
+        paint.setStrokeCap(Paint.Cap.ROUND);
+        paint.setAntiAlias(true);
+        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
 
+        paintText.setColor(Color.BLUE);
+        paintText.setTextSize(50);
+
+        List<Classifier.Recognition> mappedRecognitions = TensorFlowObjectDetectionAPIModel.getResults();
+
+        if(mappedRecognitions == null){
+            return bmp;
+        }
+
+        if(mappedRecognitions.size() > 0){
+            for(Classifier.Recognition recognition : mappedRecognitions){
+                final RectF location = recognition.getLocation();
+
+                String word = recognition.getTitle();
+
+                // Draw rect on canvas
+                canvas.drawRoundRect(location, 30, 30, paint);
+
+                // Draw label on canvas
+                paintText.getTextBounds(word, 0, word.length(), bounds);
+                canvas.drawText(word, location.centerX(), location.top-15, paintText);
+            }
+        }
+
+        return bmp;
+    }
 
 
 

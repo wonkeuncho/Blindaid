@@ -5,12 +5,15 @@ import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.RectF;
 import android.os.Trace;
+import android.util.Log;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Vector;
@@ -26,6 +29,9 @@ public class TensorFlowObjectDetectionAPIModel implements Classifier {
 
     // Only return this many results.
     private static final int MAX_RESULTS = 100;
+
+    // Save results of recognition.
+    private static List<Recognition> results;
 
     // Config values.
     private String inputName;
@@ -183,6 +189,18 @@ public class TensorFlowObjectDetectionAPIModel implements Classifier {
         }
         Trace.endSection(); // "recognizeImage"
         return recognitions;
+    }
+
+    public static void setResults(List<Recognition> recognitions) {
+        Log.i("SETTING : ", "Results");
+
+        results = recognitions;
+    }
+
+    public static List<Recognition> getResults() {
+        Log.i("GETTING : ", "Results");
+
+        return results;
     }
 
     @Override
