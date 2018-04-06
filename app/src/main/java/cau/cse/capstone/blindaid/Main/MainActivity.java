@@ -3,6 +3,13 @@ package cau.cse.capstone.blindaid.Main;
 import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.RectF;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -22,7 +29,10 @@ import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
 import org.opencv.core.Mat;
+import org.opencv.core.Rect;
+import org.opencv.core.Size;
 
 import cau.cse.capstone.blindaid.R;
 
@@ -32,6 +42,9 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     private boolean mIsJavaCamera = true;
     private MenuItem mItemSwitchCamera = null;
     private String speechtotext;
+    private Mat matInput;
+    private Mat matResult;
+    private Mat matLegacy;
 
     private Handler handler;
     private HandlerThread handlerThread;
@@ -147,9 +160,56 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
 
     }
 
-    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
-        return inputFrame.rgba();
+
+    public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
+
+        matInput = inputFrame.rgba();
+        if ( matResult != null ) matResult.release();
+        matResult = new Mat(matInput.rows(), matInput.cols(), matInput.type());
+
+        Bitmap bmp = Bitmap.createBitmap(matInput.cols(), matInput.rows(), Bitmap.Config.ARGB_8888);
+
+        try {
+            Utils.matToBitmap(matInput, bmp);
+        } catch(Exception e) {
+            Log.e(TAG, "Utils.matToBitmap() throws an exception: " + e.getMessage());
+            bmp.recycle();
+            return null;
+        }
+
+        // Processing Frame which is converted to bitmap ARGB_9999 format
+        Canvas canvas = new Canvas(bmp);
+        Paint paint = new Paint();
+        Paint paintText = new Paint();
+        RectF rectF = new RectF(300, 300, 600, 600);
+        android.graphics.Rect bounds = new android.graphics.Rect();
+        String word = "Wallet";
+
+        paint.setColor(Color.RED);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(7);
+        paint.setStrokeCap(Paint.Cap.ROUND);
+        paint.setAntiAlias(true);
+        canvas.drawRoundRect(rectF, 30, 30, paint);
+        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
+
+
+        paintText.setColor(Color.BLUE);
+        paintText.setTextSize(50);
+        paintText.getTextBounds(word, 0, word.length(), bounds);
+        canvas.drawText(word,rectF.centerX(),rectF.top-15, paintText);
+
+        if(matResult != null){
+            Utils.bitmapToMat(bmp, matResult);
+            matLegacy = matResult;
+            matResult = null;
+        }
+        return matLegacy;
     }
+
+
+
+
 
     private boolean grantCameraPermission() {
         if (Build.VERSION.SDK_INT >= 23) {
