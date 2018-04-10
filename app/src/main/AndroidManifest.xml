@@ -45,7 +45,8 @@
         <activity
             android:name=".Main.MainActivity"
             android:configChanges="keyboardHidden|orientation"
-            android:screenOrientation="landscape"></activity>
+            android:screenOrientation="landscape">
+        </activity>
     </application>
 
 </manifest>
