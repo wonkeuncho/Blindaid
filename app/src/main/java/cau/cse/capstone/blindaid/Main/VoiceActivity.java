@@ -34,9 +34,6 @@ public class VoiceActivity extends Activity {
     private String answer;
     private SpeechRecognizer sr;
 
-
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         grantPermission();

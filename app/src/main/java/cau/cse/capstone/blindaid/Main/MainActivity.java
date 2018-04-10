@@ -156,8 +156,8 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
         previewSize = new Size(width, height);
         Log.i("previewSize_H : ", previewSize.getHeight() + "");
         Log.i("previewSize_W : ", previewSize.getWidth() + "");
-        rotation = (int)mOpenCvCameraView.getRotation();
-        detector = new Detector(getApplicationContext(), previewSize, rotation);
+        //rotation = (int)mOpenCvCameraView.getRotation();
+        detector = new Detector(getApplicationContext(), previewSize, 90);
 
         handlerThread = new HandlerThread("inference");
         handlerThread.start();
@@ -226,7 +226,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
                 final RectF location = recognition.getLocation();
 
                 String word = recognition.getTitle();
-
+                Log.i("Detected Object : ", word);
                 // Draw rect on canvas
                 canvas.drawRoundRect(location, 30, 30, paint);
 
