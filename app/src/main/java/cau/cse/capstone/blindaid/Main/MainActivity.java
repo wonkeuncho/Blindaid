@@ -232,7 +232,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
 
                 // Draw label on canvas
                 paintText.getTextBounds(word, 0, word.length(), bounds);
-                canvas.drawText(word, location.centerX(), location.top-15, paintText);
+                canvas.drawText(word, location.centerX(), location.bottom-15, paintText);
             }
         }
 
