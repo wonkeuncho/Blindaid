@@ -4,7 +4,6 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -16,6 +15,7 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 import android.view.Menu;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -27,12 +27,9 @@ import cau.cse.capstone.blindaid.R;
 public class VoiceActivity extends Activity {
     private static final String TAG = "VoiceActivity";
     private TextView txtSpeechInput;
-    private final int REQ_CODE_SPEECH_INPUT = 100;
-    private final int REQ_CODE_CHECK_SPEECH = 101;
-    private MediaPlayer mMediaPlayer;
     private TextToSpeech tts;
-    private String answer;
     private SpeechRecognizer sr;
+    private ImageButton btn_speak;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,24 +37,20 @@ public class VoiceActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_voice);
 
+        btn_speak = (ImageButton) findViewById(R.id.btnSpeak);
         txtSpeechInput = (TextView) findViewById(R.id.txtSpeechInput);
         tts = new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
             @Override
             public void onInit(int status) {
                 if(status != TextToSpeech.ERROR) {
                     tts.setLanguage(Locale.ENGLISH);
+                    letUserSaying();
                 }
             }
         });
         // Set SpeechRecognizer
         sr = SpeechRecognizer.createSpeechRecognizer(this);
         sr.setRecognitionListener(recognitionListener);
-
-        // Set Media File to MediaPlayer
-        mMediaPlayer = MediaPlayer.create(this, R.raw.tellmewhatyouwant);
-
-        // Auto Start
-        letUserSaying();
     }
 
     @Override
@@ -107,7 +100,8 @@ public class VoiceActivity extends Activity {
     }
 
     public void letUserSaying(){
-        mMediaPlayer.start();
+        btn_speak.setImageResource(R.drawable.ico_mic);
+        tts.speak("Tell me what you want to find", TextToSpeech.QUEUE_FLUSH, null);
 
         // Speech Recognition
         new Handler().postDelayed(new Runnable() {
@@ -119,14 +113,16 @@ public class VoiceActivity extends Activity {
                 intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
                         getString(R.string.speech_prompt));
                 sr.startListening(intent);
+                btn_speak.setImageResource(R.drawable.ico_speak);
             }
         }, 2000);
     }
 
     public void letUserCheckSaying(){
+        btn_speak.setImageResource(R.drawable.ico_mic);
         // Ask user to Check the text you want to find
-        tts.speak("You said" + txtSpeechInput.getText().toString() + "Right?" +
-                "Please say yes or no", TextToSpeech.QUEUE_ADD, null);
+        tts.speak("You said " + txtSpeechInput.getText().toString() + "  Right?" +
+                "Please say yes or no", TextToSpeech.QUEUE_FLUSH, null);
 
         // Speech Recognition( Delay 1.5s )
         new Handler().postDelayed(new Runnable() {
@@ -138,6 +134,7 @@ public class VoiceActivity extends Activity {
                 intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
                         getString(R.string.speech_prompt));
                 sr.startListening(intent);
+                btn_speak.setImageResource(R.drawable.ico_speak);
             }
         }, 3000);
 
@@ -197,7 +194,7 @@ public class VoiceActivity extends Activity {
             else{
                 if(checkSpeech(result.get(0).toString())){
                     // Release resource
-                    mMediaPlayer.release();
+                    //mMediaPlayer.release();
                     tts.shutdown();
 
                     // Start MainActivity
