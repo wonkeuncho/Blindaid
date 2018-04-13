@@ -79,8 +79,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         //grantCameraPermission();
-        speechtotext = getIntent().getExtras().getString("Text");
-
+        speechtotext = getIntent().getExtras().getString("Text").toString();
         Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -205,7 +204,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
         Paint paint = new Paint();
         Paint paintText = new Paint();
         android.graphics.Rect bounds = new android.graphics.Rect();
-        paint.setColor(Color.RED);
+        paint.setColor(Color.BLUE);
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(7);
         paint.setStrokeCap(Paint.Cap.ROUND);
@@ -227,6 +226,12 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
 
                 String word = recognition.getTitle();
                 Log.i("Detected Object : ", word);
+                if(speechtotext.equals(word)){
+                    paint.setColor(Color.RED);
+                }
+                else{
+                    paint.setColor(Color.BLUE);
+                }
                 // Draw rect on canvas
                 canvas.drawRoundRect(location, 30, 30, paint);
 
