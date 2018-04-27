@@ -6,11 +6,11 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
@@ -39,24 +39,60 @@ public class VoiceActivity extends Activity {
 
         btn_speak = (ImageButton) findViewById(R.id.btnSpeak);
         txtSpeechInput = (TextView) findViewById(R.id.txtSpeechInput);
+
+        // Set SpeechRecognizer
+        sr = SpeechRecognizer.createSpeechRecognizer(VoiceActivity.this);
+        sr.setRecognitionListener(recognitionListener);
+
+        // Text To Speech
         tts = new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
             @Override
             public void onInit(int status) {
-                if(status != TextToSpeech.ERROR) {
+                if (status != TextToSpeech.ERROR) {
+                    tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                        @Override
+                        public void onStart(String utteranceId) {
+                            Log.i("OnUtteranceProgresserListener", "onStart");
+                        }
+
+                        @Override
+                        public void onDone(String utteranceId) {
+                            if(utteranceId.equals("checking"))
+                            {
+                                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US");
+                                intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
+                                        getString(R.string.speech_prompt));
+
+                                VoiceActivity.this.runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        sr.startListening(intent);
+                                        btn_speak.setImageResource(R.drawable.ico_speak);
+                                    }
+                                });
+                            }
+                        }
+
+                        @Override
+                        public void onError(String utteranceId) {
+                            Log.i("OnUtteranceProgresserListener", "onError");
+                        }
+                    });
+
                     tts.setLanguage(Locale.ENGLISH);
                     letUserSaying();
                 }
             }
         });
-        // Set SpeechRecognizer
-        sr = SpeechRecognizer.createSpeechRecognizer(this);
-        sr.setRecognitionListener(recognitionListener);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-//        getMenuInflater().inflate(R.menu.main, menu);
+        //  getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }
 
@@ -90,80 +126,56 @@ public class VoiceActivity extends Activity {
         }
     }
 
-    public boolean checkSpeech(String answer){
+    public int checkSpeech(String answer) {
         // if say yes
-        if(answer.equals("yes"))
-            return true;
-            // if say no or anything
+        if (answer.equals("yes"))
+            return 1;
+            // if say no
+
+        else if (answer.equals("no"))
+            return 2;
+
         else
-            return false;
+            return 3;
     }
 
-    public void letUserSaying(){
+    public void letUserSaying() {
+        Log.i("letUserSaying", "Check");
         btn_speak.setImageResource(R.drawable.ico_mic);
-        tts.speak("Tell me what you want to find", TextToSpeech.QUEUE_FLUSH, null);
-
-        // Speech Recognition
-        new Handler().postDelayed(new Runnable() {
-            @Override public void run() {
-                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US");
-                intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
-                        getString(R.string.speech_prompt));
-                sr.startListening(intent);
-                btn_speak.setImageResource(R.drawable.ico_speak);
-            }
-        }, 2000);
+        tts.speak("Tell me what you want to find", TextToSpeech.QUEUE_FLUSH, null, "checking");
     }
 
-    public void letUserCheckSaying(){
+    public void letUserCheckSaying() {
         btn_speak.setImageResource(R.drawable.ico_mic);
         // Ask user to Check the text you want to find
         tts.speak("You said " + txtSpeechInput.getText().toString() + "  Right?" +
-                "Please say yes or no", TextToSpeech.QUEUE_FLUSH, null);
-
-        // Speech Recognition( Delay 1.5s )
-        new Handler().postDelayed(new Runnable() {
-            @Override public void run() {
-                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US");
-                intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
-                        getString(R.string.speech_prompt));
-                sr.startListening(intent);
-                btn_speak.setImageResource(R.drawable.ico_speak);
-            }
-        }, 3000);
-
+                "Please say yes or no", TextToSpeech.QUEUE_FLUSH, null, "checking");
     }
 
     private RecognitionListener recognitionListener = new RecognitionListener() {
         @Override
         public void onReadyForSpeech(Bundle params) {
-
+            Log.i("i", "onReadyForSpeech");
         }
 
         @Override
         public void onBeginningOfSpeech() {
-
+            Log.i("i", "onBeginningOfSpeech");
         }
 
         @Override
         public void onRmsChanged(float rmsdB) {
-
+            Log.i("i", "onRmsChanged");
         }
 
         @Override
         public void onBufferReceived(byte[] buffer) {
-
+            Log.i("i", "onBufferReceived");
         }
 
         @Override
         public void onEndOfSpeech() {
-
+            Log.i("i", "onEndOfSpeech");
         }
 
         @Override
@@ -173,12 +185,22 @@ public class VoiceActivity extends Activity {
                 case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
                     Toast.makeText(VoiceActivity.this, "Check Permission, Use Android Settings", Toast.LENGTH_SHORT).show();
                     break;
+
                 case SpeechRecognizer.ERROR_NO_MATCH:
-                    if(txtSpeechInput.getText().toString().equals("")){
+                    if (txtSpeechInput.getText().toString().equals("")) {
                         letUserSaying();
-                    }
-                    else
+                    } else
                         letUserCheckSaying();
+                    break;
+
+                case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
+                    Log.i("SR", "Error TimeOut");
+                    if (txtSpeechInput.getText().toString().equals("")) {
+                        letUserSaying();
+                    } else
+                        letUserCheckSaying();
+                    break;
+
             }
         }
 
@@ -187,12 +209,13 @@ public class VoiceActivity extends Activity {
             ArrayList<String> result = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
             Log.d(TAG, result.get(0));
 
-            if(txtSpeechInput.getText().toString().equals("")){
+            if (txtSpeechInput.getText().toString().equals("")) {
                 txtSpeechInput.setText(result.get(0).toString());
                 letUserCheckSaying();
-            }
-            else{
-                if(checkSpeech(result.get(0).toString())){
+
+            } else {
+                int opt = checkSpeech(result.get(0).toString());
+                if (opt == 1) {
                     // Release resource
                     //mMediaPlayer.release();
                     tts.shutdown();
@@ -202,10 +225,11 @@ public class VoiceActivity extends Activity {
                     i.putExtra("Text", txtSpeechInput.getText().toString());
                     startActivity(i);
                     finish();
-                }
-                else{
-                    letUserSaying();
+                } else if (opt == 2) {
                     txtSpeechInput.setText("");
+                    letUserSaying();
+                } else {
+                    letUserCheckSaying();
                 }
             }
         }
