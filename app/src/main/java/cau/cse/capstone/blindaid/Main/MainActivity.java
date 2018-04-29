@@ -2,6 +2,7 @@ package cau.cse.capstone.blindaid.Main;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -9,11 +10,13 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Vibrator;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
@@ -79,7 +82,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         //grantCameraPermission();
-        speechtotext = getIntent().getExtras().getString("Text");
+       speechtotext = getIntent().getExtras().getString("Text");
 
         Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
@@ -174,12 +177,12 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
 
         matInput = inputFrame.rgba();
-
         if ( matResult != null ) matResult.release();
 
         matResult = new Mat(matInput.rows(), matInput.cols(), matInput.type());
 
         Bitmap bmp = Bitmap.createBitmap(matInput.cols(), matInput.rows(), Bitmap.Config.ARGB_8888);
+
 
         try {
             Utils.matToBitmap(matInput, bmp);
@@ -199,21 +202,38 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
         return matLegacy;
     }
 
+    private void drawCenter(Canvas canvas){
+
+        Paint paintCenter = new Paint();
+        final  RectF rectCenter = new RectF(650, 250, 1250, 850);
+        paintCenter.setColor(Color.GREEN);
+        paintCenter.setStyle(Paint.Style.STROKE);
+        paintCenter.setStrokeWidth(15);
+        paintCenter.setStrokeCap(Paint.Cap.ROUND);
+        paintCenter.setAntiAlias(true);
+        canvas.drawRoundRect(rectCenter, 30,  30, paintCenter);
+
+    }
+
     private Bitmap drawRect(Bitmap bmp){
         // Processing Frame which is converted to bitmap ARGB_9999 format
+
         Canvas canvas = new Canvas(bmp);
         Paint paint = new Paint();
         Paint paintText = new Paint();
         android.graphics.Rect bounds = new android.graphics.Rect();
-        paint.setColor(Color.RED);
+        paint.setColor(Color.BLUE);
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(7);
         paint.setStrokeCap(Paint.Cap.ROUND);
         paint.setAntiAlias(true);
         paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
 
+
         paintText.setColor(Color.BLUE);
         paintText.setTextSize(50);
+
+        drawCenter(canvas);
 
         List<Classifier.Recognition> mappedRecognitions = TensorFlowObjectDetectionAPIModel.getResults();
 
@@ -225,9 +245,27 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
             for(Classifier.Recognition recognition : mappedRecognitions){
                 final RectF location = recognition.getLocation();
 
+                String sample = "bottle";
                 String word = recognition.getTitle();
                 Log.i("Detected Object : ", word);
+
+                if(sample.equals(word)){  // 원래는 speechtotext와 비교
+                    paint.setColor(Color.RED);
+                    if((location.left < 1250 && location.left > 650 )|| (location.right < 1250 && location.right > 650 )){
+                        paint.setColor(Color.WHITE);
+                        final Vibrator vibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
+                        vibrator.vibrate(500);
+
+                    }
+
+                }
+                else{
+                    paint.setColor(Color.BLUE);
+                }
+
                 // Draw rect on canvas
+
+
                 canvas.drawRoundRect(location, 30, 30, paint);
 
                 // Draw label on canvas

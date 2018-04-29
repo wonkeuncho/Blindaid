@@ -13,9 +13,9 @@ fire hydrant
 ???
 stop sign
 parking meter
+cat
 bench
 bird
-cat
 dog
 horse
 sheep
