@@ -76,13 +76,18 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     public MainActivity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
+
     /**
      * Called when the activity is first created.
      */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         //grantCameraPermission();
-       speechtotext = getIntent().getExtras().getString("Text");
+
+        speechtotext = getIntent().getExtras().getString("Text");
+
+
+        speechtotext = getIntent().getExtras().getString("Text").toString();
 
         Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
@@ -177,7 +182,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
 
         matInput = inputFrame.rgba();
-        if ( matResult != null ) matResult.release();
+        if (matResult != null) matResult.release();
 
         matResult = new Mat(matInput.rows(), matInput.cols(), matInput.type());
 
@@ -186,7 +191,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
 
         try {
             Utils.matToBitmap(matInput, bmp);
-        } catch(Exception e) {
+        } catch (Exception e) {
             Log.e(TAG, "Utils.matToBitmap() throws an exception: " + e.getMessage());
             bmp.recycle();
             return null;
@@ -194,7 +199,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
 
         detector.processImage(bmp);
 
-        if(matResult != null){
+        if (matResult != null) {
             Utils.bitmapToMat(drawRect(bmp), matResult);
             matLegacy = matResult;
             matResult = null;
@@ -202,20 +207,20 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
         return matLegacy;
     }
 
-    private void drawCenter(Canvas canvas){
+    private void drawCenter(Canvas canvas) {
 
         Paint paintCenter = new Paint();
-        final  RectF rectCenter = new RectF(650, 250, 1250, 850);
+        final RectF rectCenter = new RectF(650, 250, 1250, 850);
         paintCenter.setColor(Color.GREEN);
         paintCenter.setStyle(Paint.Style.STROKE);
         paintCenter.setStrokeWidth(15);
         paintCenter.setStrokeCap(Paint.Cap.ROUND);
         paintCenter.setAntiAlias(true);
-        canvas.drawRoundRect(rectCenter, 30,  30, paintCenter);
+        canvas.drawRoundRect(rectCenter, 30, 30, paintCenter);
 
     }
 
-    private Bitmap drawRect(Bitmap bmp){
+    private Bitmap drawRect(Bitmap bmp) {
         // Processing Frame which is converted to bitmap ARGB_9999 format
 
         Canvas canvas = new Canvas(bmp);
@@ -237,46 +242,50 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
 
         List<Classifier.Recognition> mappedRecognitions = TensorFlowObjectDetectionAPIModel.getResults();
 
-        if(mappedRecognitions == null){
+        if (mappedRecognitions == null) {
             return bmp;
         }
 
-        if(mappedRecognitions.size() > 0){
-            for(Classifier.Recognition recognition : mappedRecognitions){
+        if (mappedRecognitions.size() > 0) {
+            for (Classifier.Recognition recognition : mappedRecognitions) {
                 final RectF location = recognition.getLocation();
 
                 String sample = "bottle";
                 String word = recognition.getTitle();
                 Log.i("Detected Object : ", word);
 
-                if(sample.equals(word)){  // 원래는 speechtotext와 비교
+                if (sample.equals(word)) {  // 원래는 speechtotext와 비교
                     paint.setColor(Color.RED);
-                    if((location.left < 1250 && location.left > 650 )|| (location.right < 1250 && location.right > 650 )){
+                    if ((location.left < 1250 && location.left > 650) || (location.right < 1250 && location.right > 650)) {
                         paint.setColor(Color.WHITE);
-                        final Vibrator vibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
+                        final Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
                         vibrator.vibrate(500);
 
                     }
 
+
+                    if (speechtotext.equals(word)) {
+                        paint.setColor(Color.RED);
+
+                    } else {
+                        paint.setColor(Color.BLUE);
+                    }
+
+
+                    // Draw rect on canvas
+
+
+                    canvas.drawRoundRect(location, 30, 30, paint);
+
+                    // Draw label on canvas
+                    paintText.getTextBounds(word, 0, word.length(), bounds);
+                    canvas.drawText(word, location.centerX(), location.bottom - 15, paintText);
                 }
-                else{
-                    paint.setColor(Color.BLUE);
-                }
-
-                // Draw rect on canvas
-
-
-                canvas.drawRoundRect(location, 30, 30, paint);
-
-                // Draw label on canvas
-                paintText.getTextBounds(word, 0, word.length(), bounds);
-                canvas.drawText(word, location.centerX(), location.bottom-15, paintText);
             }
         }
 
         return bmp;
     }
-
 
 
     private boolean grantCameraPermission() {
@@ -300,14 +309,14 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (Build.VERSION.SDK_INT >= 23) {
-            if(grantResults[0]== PackageManager.PERMISSION_GRANTED){
-                Log.v(TAG,"Permission: "+permissions[0]+ "was "+grantResults[0]);
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.v(TAG, "Permission: " + permissions[0] + "was " + grantResults[0]);
                 //resume tasks needing this permission
             }
         }
     }
 
-    public void sayDistancefromScreen(){
+    public void sayDistancefromScreen() {
 
     }
 }
