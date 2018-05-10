@@ -8,6 +8,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
@@ -51,6 +52,8 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
 
     private Size previewSize;
     private int rotation;
+    private boolean flagUpdown = false;
+    private boolean flagLeftright = false;
     private Detector detector;
 
     private Handler handler;
@@ -84,10 +87,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     public void onCreate(Bundle savedInstanceState) {
         //grantCameraPermission();
 
-        speechtotext = getIntent().getExtras().getString("Text");
-
-
-        speechtotext = getIntent().getExtras().getString("Text").toString();
+        //speechtotext = getIntent().getExtras().getString("Text").toString();
 
         Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
@@ -207,16 +207,27 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
         return matLegacy;
     }
 
+    // draw 4 guide lines using 2 rectangles
     private void drawCenter(Canvas canvas) {
 
+        final int guideLeft = canvas.getWidth() / 2 - 50;
+        final int guideRight = canvas.getWidth() / 2 + 50;
+        final int guideTop = canvas.getHeight() / 2 - 50;
+        final int guideBottom = canvas.getHeight() / 2 + 50;
+
+
         Paint paintCenter = new Paint();
-        final RectF rectCenter = new RectF(650, 250, 1250, 850);
-        paintCenter.setColor(Color.GREEN);
+        final RectF rectCenter = new RectF(guideLeft, -50, guideRight, canvas.getHeight() + 50); //세로사각형 캔버스 크기로 받아오기
+        final RectF rectCenter2 = new RectF(-50, guideTop, canvas.getWidth() + 50, guideBottom); //가로사각형
+
+        int color = Color.argb(255, 255, 187, 0);
+        paintCenter.setColor(color);
         paintCenter.setStyle(Paint.Style.STROKE);
-        paintCenter.setStrokeWidth(15);
-        paintCenter.setStrokeCap(Paint.Cap.ROUND);
+        paintCenter.setStrokeWidth(10);
+        //paintCenter.setStrokeCap(Paint.Cap.ROUND);
         paintCenter.setAntiAlias(true);
-        canvas.drawRoundRect(rectCenter, 30, 30, paintCenter);
+        canvas.drawRoundRect(rectCenter, 0, 0, paintCenter);
+        canvas.drawRoundRect(rectCenter2, 0, 0, paintCenter);
 
     }
 
@@ -224,8 +235,15 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
         // Processing Frame which is converted to bitmap ARGB_9999 format
 
         Canvas canvas = new Canvas(bmp);
+
+        final int guideLeft = canvas.getWidth() / 2 - 50;
+        final int guideRight = canvas.getWidth() / 2 + 50;
+        final int guideTop = canvas.getHeight() / 2 - 50;
+        final int guideBottom = canvas.getHeight() / 2 + 50;
+
         Paint paint = new Paint();
         Paint paintText = new Paint();
+        Paint guideText = new Paint();
         android.graphics.Rect bounds = new android.graphics.Rect();
         paint.setColor(Color.BLUE);
         paint.setStyle(Paint.Style.STROKE);
@@ -237,6 +255,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
 
         paintText.setColor(Color.BLUE);
         paintText.setTextSize(50);
+
 
         drawCenter(canvas);
 
@@ -250,37 +269,70 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
             for (Classifier.Recognition recognition : mappedRecognitions) {
                 final RectF location = recognition.getLocation();
 
-                String sample = "bottle";
+                String sample = "mouse";
                 String word = recognition.getTitle();
                 Log.i("Detected Object : ", word);
 
-                if (sample.equals(word)) {  // 원래는 speechtotext와 비교
+                //내가 찾고자하는 물체가 카메라 프레임 안에 있는 경우
+                if (sample.equals(word)) {  // SpeechText와 원래 비교하지만 sample타겟 저장.
+
+                    //guideText : 좌우상하 타겟존재여부 텍스트로 알려주는 테스트용
+                    guideText.setColor(Color.RED);
+                    guideText.setTextSize(100);
+                    canvas.drawText("Target Detect", 100, 900, guideText);
+
                     paint.setColor(Color.RED);
-                    if ((location.left < 1250 && location.left > 650) || (location.right < 1250 && location.right > 650)) {
-                        paint.setColor(Color.WHITE);
+                    paintText.setColor(Color.RED); ///  final Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE); vibrator.vibrate(500);
+
+
+                    //좌우비교
+                    //location.left >> 포착된 타켓 물체의 바운더리사각형의 왼쪽 변. right,top,bottom 마찬가지
+                    //guideRight는 가이드 세로선 2개 중 오른쪽, left,top,bottom 마찬가지
+                    if ((location.left > guideRight) || (location.left >= guideLeft && location.left <= guideRight && location.right > guideRight)) {
+                        canvas.drawText("우", 100, 100, guideText);
+                        flagLeftright = false;
+                    } else if ((location.right < guideLeft) || (location.right >= guideLeft && location.right <= guideRight && location.left < guideLeft)) {
+                        canvas.drawText("좌", 100, 100, guideText);
+                        flagLeftright = false;
+                    }
+                    if (location.left < guideLeft && location.right > guideRight) {
+                        canvas.drawText("좌우맞아", 100, 100, guideText);
+                        flagLeftright = true;
+                    }
+
+                    //상하비교
+                    if ((location.top > guideBottom) || (location.top >= guideTop && location.top <= guideBottom && location.bottom > guideBottom)) {
+                        canvas.drawText("하", 100, 200, guideText);
+                        flagUpdown = false;
+                    } else if ((location.bottom < guideTop) || (location.bottom >= guideTop && location.bottom <= guideBottom && location.top < guideTop)) {
+                        canvas.drawText("상", 100, 200, guideText);
+                        flagUpdown = false;
+                    }
+                    if (location.top < guideTop && location.bottom > guideBottom) {
+                        canvas.drawText("상하맞아", 100, 200, guideText);
+                        flagUpdown = true;
+                    }
+
+                    //좌우도 맞고 상하도 맞는 경우 ->  진동
+                    if (flagUpdown && flagLeftright) {
                         final Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
                         vibrator.vibrate(500);
 
                     }
 
-
-                    if (speechtotext.equals(word)) {
-                        paint.setColor(Color.RED);
-
-                    } else {
-                        paint.setColor(Color.BLUE);
-                    }
-
-
-                    // Draw rect on canvas
-
-
-                    canvas.drawRoundRect(location, 30, 30, paint);
-
-                    // Draw label on canvas
-                    paintText.getTextBounds(word, 0, word.length(), bounds);
-                    canvas.drawText(word, location.centerX(), location.bottom - 15, paintText);
+                    //찾고자 하는 물체가 프레임에 없는 경우
+                } else {
+                    paint.setColor(Color.BLUE);
+                    paintText.setColor(Color.BLUE);
                 }
+
+
+                // Draw rect on canvas
+                canvas.drawRoundRect(location, 30, 30, paint);
+
+                // Draw label on canvas
+                paintText.getTextBounds(word, 0, word.length(), bounds);
+                canvas.drawText(word, location.centerX(), location.bottom - 15, paintText);
             }
         }
 
