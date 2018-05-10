@@ -22,6 +22,7 @@ import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.os.Handler;
+import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
 import android.view.WindowManager;
@@ -113,6 +114,7 @@ public class Detector {
     }
 
     public void processImage(Bitmap rgbFrameBitmap){
+
         if(computingDetection){
             /**TODO
              * 이전 프레임의 처리가 아직 끝나지 않았을 때
