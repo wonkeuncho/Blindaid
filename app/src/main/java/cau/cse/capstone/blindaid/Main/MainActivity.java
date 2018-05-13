@@ -8,16 +8,16 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
-import android.graphics.Rect;
 import android.graphics.RectF;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Vibrator;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
@@ -37,6 +37,7 @@ import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 
 import java.util.List;
+import java.util.Locale;
 
 import cau.cse.capstone.blindaid.R;
 
@@ -45,7 +46,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     private CameraBridgeViewBase mOpenCvCameraView;
     private boolean mIsJavaCamera = true;
     private MenuItem mItemSwitchCamera = null;
-    private String speechtotext;
+    private String find_str;
     private Mat matInput;
     private Mat matResult;
     private Mat matLegacy;
@@ -58,6 +59,11 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
 
     private Handler handler;
     private HandlerThread handlerThread;
+
+    // Text to speech
+    private TextToSpeech tts;
+    private int [] lr_flag = { 0 ,0 ,0 };
+    private int [] ud_flag = { 0, 0, 0};
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -87,7 +93,33 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     public void onCreate(Bundle savedInstanceState) {
         //grantCameraPermission();
 
-        //speechtotext = getIntent().getExtras().getString("Text").toString();
+        // Text To Speech
+        tts = new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if (status != TextToSpeech.ERROR) {
+                    tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                        @Override
+                        public void onStart(String utteranceId) {
+                            Log.i("OnUtteranceProgresserListener", "onStart");
+                        }
+
+                        @Override
+                        public void onDone(String utteranceId) {
+
+                        }
+
+                        @Override
+                        public void onError(String utteranceId) {
+                            Log.i("OnUtteranceProgresserListener", "onError");
+                        }
+                    });
+                    tts.setLanguage(Locale.ENGLISH);
+                }
+            }
+        });
+
+        find_str = getIntent().getExtras().getString("Text").toString();
 
         Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
@@ -269,13 +301,14 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
             for (Classifier.Recognition recognition : mappedRecognitions) {
                 final RectF location = recognition.getLocation();
 
-                String sample = "mouse";
+                // Test
+                //String sample = "mouse";
+                String sample = find_str.toLowerCase().toString();
                 String word = recognition.getTitle();
                 Log.i("Detected Object : ", word);
 
                 //내가 찾고자하는 물체가 카메라 프레임 안에 있는 경우
                 if (sample.equals(word)) {  // SpeechText와 원래 비교하지만 sample타겟 저장.
-
                     //guideText : 좌우상하 타겟존재여부 텍스트로 알려주는 테스트용
                     guideText.setColor(Color.RED);
                     guideText.setTextSize(100);
@@ -291,26 +324,86 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
                     if ((location.left > guideRight) || (location.left >= guideLeft && location.left <= guideRight && location.right > guideRight)) {
                         canvas.drawText("우", 100, 100, guideText);
                         flagLeftright = false;
+                        if(lr_flag[0] == 0 && !tts.isSpeaking()){
+                            lr_flag[0] = 1;
+                            lr_flag[1] = 0;
+                            lr_flag[2] = 0;
+                            tts.speak("Right", TextToSpeech.QUEUE_FLUSH, null, null);
+                        }
                     } else if ((location.right < guideLeft) || (location.right >= guideLeft && location.right <= guideRight && location.left < guideLeft)) {
                         canvas.drawText("좌", 100, 100, guideText);
                         flagLeftright = false;
+                        if(lr_flag[1] == 0 && !tts.isSpeaking()){
+                            lr_flag[1] = 1;
+                            lr_flag[0] = 0;
+                            lr_flag[2] = 0;
+                            tts.speak("Left", TextToSpeech.QUEUE_FLUSH, null, null);
+                        }
                     }
                     if (location.left < guideLeft && location.right > guideRight) {
                         canvas.drawText("좌우맞아", 100, 100, guideText);
                         flagLeftright = true;
+                        if(lr_flag[2] == 0 && !tts.isSpeaking()){
+                            lr_flag[2] = 1;
+                            lr_flag[0] = 0;
+                            lr_flag[1] = 0;
+                            tts.speak("Right and Left is okay", TextToSpeech.QUEUE_FLUSH, null, null);
+                        }
                     }
 
                     //상하비교
                     if ((location.top > guideBottom) || (location.top >= guideTop && location.top <= guideBottom && location.bottom > guideBottom)) {
                         canvas.drawText("하", 100, 200, guideText);
                         flagUpdown = false;
+                        if(ud_flag[0] == 0 && !tts.isSpeaking()){
+                            ud_flag[0] = 1;
+                            ud_flag[1] = 0;
+                            ud_flag[2] = 0;
+                            String lr_info;
+                            if(lr_flag[0] == 1)
+                                lr_info = "Right ";
+                            else if(lr_flag[1] == 1)
+                                lr_info = "Left ";
+                            else
+                                lr_info = "Left Right is okay ";
+
+                            tts.speak(lr_info + "Down", TextToSpeech.QUEUE_FLUSH, null, null);
+                        }
                     } else if ((location.bottom < guideTop) || (location.bottom >= guideTop && location.bottom <= guideBottom && location.top < guideTop)) {
                         canvas.drawText("상", 100, 200, guideText);
                         flagUpdown = false;
+                        if(ud_flag[1] == 0 && !tts.isSpeaking()){
+                            ud_flag[1] = 1;
+                            ud_flag[0] = 0;
+                            ud_flag[2] = 0;
+                            String lr_info;
+                            if(lr_flag[0] == 1)
+                                lr_info = "Right";
+                            else if(lr_flag[1] == 1)
+                                lr_info = "Left";
+                            else
+                                lr_info = "Left Right is okay ";
+
+                            tts.speak(lr_info +"Up", TextToSpeech.QUEUE_FLUSH, null, null);
+                        }
                     }
                     if (location.top < guideTop && location.bottom > guideBottom) {
                         canvas.drawText("상하맞아", 100, 200, guideText);
                         flagUpdown = true;
+                        if(ud_flag[2] == 0 && !tts.isSpeaking()){
+                            ud_flag[2] = 1;
+                            ud_flag[0] = 0;
+                            ud_flag[1] = 0;
+                            String lr_info;
+                            if(lr_flag[0] == 1)
+                                lr_info = "Right ";
+                            else if(lr_flag[1] == 1)
+                                lr_info = "Left ";
+                            else
+                                lr_info = "Left Right is okay ";
+
+                            tts.speak(lr_info + "Up and down is okay", TextToSpeech.QUEUE_FLUSH, null, null);
+                        }
                     }
 
                     //좌우도 맞고 상하도 맞는 경우 ->  진동
@@ -319,6 +412,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
                         vibrator.vibrate(500);
 
                     }
+
 
                     //찾고자 하는 물체가 프레임에 없는 경우
                 } else {
