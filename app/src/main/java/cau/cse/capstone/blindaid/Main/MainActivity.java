@@ -197,7 +197,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
         Log.i("previewSize_H : ", previewSize.getHeight() + "");
         Log.i("previewSize_W : ", previewSize.getWidth() + "");
         //rotation = (int)mOpenCvCameraView.getRotation();
-        detector = new Detector(getApplicationContext(), previewSize, 90);
+        detector = new Detector(getApplicationContext(), previewSize, 90, find_str);
 
         handlerThread = new HandlerThread("inference");
         handlerThread.start();

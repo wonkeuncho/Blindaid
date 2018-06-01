@@ -17,6 +17,7 @@
 package cau.cse.capstone.blindaid.Main;
 
 import android.content.Context;
+import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
@@ -28,7 +29,10 @@ import android.view.Surface;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -42,10 +46,10 @@ public class Detector {
     // Crop original frame by (300x300) input cropped frame
     private static final int TF_OD_API_INPUT_SIZE = 300;
     // Model file trained by ImageNet for Mobile Ver.
-    private static final String TF_OD_API_MODEL_FILE =
+    private static String TF_OD_API_MODEL_FILE =
             "file:///android_asset/ssd_mobilenet_v1_android_export.pb";
     // Label file matched with Model file
-    private static final String TF_OD_API_LABELS_FILE =
+    private static String TF_OD_API_LABELS_FILE =
             "file:///android_asset/coco_labels_list.txt";
 
     // Minimum detection confidence to track a detection
@@ -75,8 +79,31 @@ public class Detector {
     public Detector() {
     }
 
-    public Detector(Context context, final Size size, final int rotation){
+    public Detector(Context context, final Size size, final int rotation, String target){
         this.context = context;
+
+        AssetManager assetManager = context.getAssets();
+        InputStream labelsInput = null;
+        try {
+            labelsInput = assetManager.open("fruit_labels_list.txt");
+            BufferedReader br = new BufferedReader(new InputStreamReader(labelsInput));
+            String line;
+            while ((line = br.readLine()) != null) {
+                if(line.compareTo(target) == 0){
+                    Log.i("Textfile line : ", line);
+                    // Model file trained by ImageNet Fruits for Mobile Ver.
+                    TF_OD_API_MODEL_FILE =
+                            "file:///android_asset/fruit_model.pb";
+                    // Label file matched with Model file
+                    TF_OD_API_LABELS_FILE =
+                            "file:///android_asset/fruit_labels_list.txt";
+                }
+            }
+            br.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         try {
             detector =
                     TensorFlowObjectDetectionAPIModel.create(
