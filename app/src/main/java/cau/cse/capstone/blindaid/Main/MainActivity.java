@@ -2,7 +2,6 @@ package cau.cse.capstone.blindaid.Main;
 
 import android.Manifest;
 import android.app.Activity;
-import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -15,7 +14,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.Vibrator;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.support.annotation.NonNull;
@@ -38,6 +36,7 @@ import org.opencv.core.Mat;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Vector;
 
 import cau.cse.capstone.blindaid.R;
 
@@ -50,20 +49,22 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     private Mat matInput;
     private Mat matResult;
     private Mat matLegacy;
+    private Vector<Classifier.Recognition> all_find = new Vector<>();
 
     private Size previewSize;
     private int rotation;
     private boolean flagUpdown = false;
     private boolean flagLeftright = false;
     private Detector detector;
+    private int detect = 0;
 
     private Handler handler;
     private HandlerThread handlerThread;
 
     // Text to speech
     private TextToSpeech tts;
-    private int [] lr_flag = { 0 ,0 ,0 };
-    private int [] ud_flag = { 0, 0, 0};
+    private int[] lr_flag = {0, 0, 0};
+    private int[] ud_flag = {0, 0, 0};
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -115,6 +116,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
                         }
                     });
                     tts.setLanguage(Locale.ENGLISH);
+                    tts.setSpeechRate((float) 0.7);
                 }
             }
         });
@@ -287,140 +289,61 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
 
         paintText.setColor(Color.BLUE);
         paintText.setTextSize(50);
-
-
         drawCenter(canvas);
 
         List<Classifier.Recognition> mappedRecognitions = TensorFlowObjectDetectionAPIModel.getResults();
-
         if (mappedRecognitions == null) {
             return bmp;
         }
 
+        // Detected Object > 0
         if (mappedRecognitions.size() > 0) {
+            String sample = find_str.toLowerCase().toString().toLowerCase();
+            all_find.clear();
+
+            // Find all object
             for (Classifier.Recognition recognition : mappedRecognitions) {
-                final RectF location = recognition.getLocation();
+                all_find.add(recognition);
+            }
 
-                // Test
-                //String sample = "mouse";
-                String sample = find_str.toLowerCase().toString();
-                String word = recognition.getTitle();
-                Log.i("Detected Object : ", word);
+            // Check
+            String word = "";
+            int check_index = -1;
+            for (int i = 0; i < all_find.size(); i++) {
+                if (sample.equals(all_find.get(i).getTitle().toString().toLowerCase())) {
+                    word = sample;
+                    check_index = i;
+                    break;
+                }
+            }
 
-                //내가 찾고자하는 물체가 카메라 프레임 안에 있는 경우
-                if (sample.equals(word)) {  // SpeechText와 원래 비교하지만 sample타겟 저장.
-                    //guideText : 좌우상하 타겟존재여부 텍스트로 알려주는 테스트용
-                    guideText.setColor(Color.RED);
-                    guideText.setTextSize(100);
-                    canvas.drawText("Target Detect", 100, 900, guideText);
+            RectF location = null;
+            if (check_index != -1)
+                location = all_find.get(check_index).getLocation();
 
-                    paint.setColor(Color.RED);
-                    paintText.setColor(Color.RED); ///  final Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE); vibrator.vibrate(500);
+            // Object Detected
+            if (check_index != -1) {
+                //내가 찾고자하는 물체가 카메라 프레임 안에 있는 경우// SpeechTex
+                //guideText : 좌우상하 타겟존재여부 텍스트로 알려주는 테스트용
+                if (detect == 0 && tts.isSpeaking() == false) {
+                    tts.speak("Target Detected", TextToSpeech.QUEUE_FLUSH, null, null);
+                    detect = 1;
+                }
+                guideText.setColor(Color.RED);
+                guideText.setTextSize(100);
+                canvas.drawText("Target Detect", 100, 900, guideText);
 
-
-                    //좌우비교
-                    //location.left >> 포착된 타켓 물체의 바운더리사각형의 왼쪽 변. right,top,bottom 마찬가지
-                    //guideRight는 가이드 세로선 2개 중 오른쪽, left,top,bottom 마찬가지
-                    if ((location.left > guideRight) || (location.left >= guideLeft && location.left <= guideRight && location.right > guideRight)) {
-                        canvas.drawText("우", 100, 100, guideText);
-                        flagLeftright = false;
-                        if(lr_flag[0] == 0 && !tts.isSpeaking()){
-                            lr_flag[0] = 1;
-                            lr_flag[1] = 0;
-                            lr_flag[2] = 0;
-                            tts.speak("Right", TextToSpeech.QUEUE_FLUSH, null, null);
-                        }
-                    } else if ((location.right < guideLeft) || (location.right >= guideLeft && location.right <= guideRight && location.left < guideLeft)) {
-                        canvas.drawText("좌", 100, 100, guideText);
-                        flagLeftright = false;
-                        if(lr_flag[1] == 0 && !tts.isSpeaking()){
-                            lr_flag[1] = 1;
-                            lr_flag[0] = 0;
-                            lr_flag[2] = 0;
-                            tts.speak("Left", TextToSpeech.QUEUE_FLUSH, null, null);
-                        }
-                    }
-                    if (location.left < guideLeft && location.right > guideRight) {
-                        canvas.drawText("좌우맞아", 100, 100, guideText);
-                        flagLeftright = true;
-                        if(lr_flag[2] == 0 && !tts.isSpeaking()){
-                            lr_flag[2] = 1;
-                            lr_flag[0] = 0;
-                            lr_flag[1] = 0;
-                            tts.speak("Right and Left is okay", TextToSpeech.QUEUE_FLUSH, null, null);
-                        }
-                    }
-
-                    //상하비교
-                    if ((location.top > guideBottom) || (location.top >= guideTop && location.top <= guideBottom && location.bottom > guideBottom)) {
-                        canvas.drawText("하", 100, 200, guideText);
-                        flagUpdown = false;
-                        if(ud_flag[0] == 0 && !tts.isSpeaking()){
-                            ud_flag[0] = 1;
-                            ud_flag[1] = 0;
-                            ud_flag[2] = 0;
-                            String lr_info;
-                            if(lr_flag[0] == 1)
-                                lr_info = "Right ";
-                            else if(lr_flag[1] == 1)
-                                lr_info = "Left ";
-                            else
-                                lr_info = "Left Right is okay ";
-
-                            tts.speak(lr_info + "Down", TextToSpeech.QUEUE_FLUSH, null, null);
-                        }
-                    } else if ((location.bottom < guideTop) || (location.bottom >= guideTop && location.bottom <= guideBottom && location.top < guideTop)) {
-                        canvas.drawText("상", 100, 200, guideText);
-                        flagUpdown = false;
-                        if(ud_flag[1] == 0 && !tts.isSpeaking()){
-                            ud_flag[1] = 1;
-                            ud_flag[0] = 0;
-                            ud_flag[2] = 0;
-                            String lr_info;
-                            if(lr_flag[0] == 1)
-                                lr_info = "Right";
-                            else if(lr_flag[1] == 1)
-                                lr_info = "Left";
-                            else
-                                lr_info = "Left Right is okay ";
-
-                            tts.speak(lr_info +"Up", TextToSpeech.QUEUE_FLUSH, null, null);
-                        }
-                    }
-                    if (location.top < guideTop && location.bottom > guideBottom) {
-                        canvas.drawText("상하맞아", 100, 200, guideText);
-                        flagUpdown = true;
-                        if(ud_flag[2] == 0 && !tts.isSpeaking()){
-                            ud_flag[2] = 1;
-                            ud_flag[0] = 0;
-                            ud_flag[1] = 0;
-                            String lr_info;
-                            if(lr_flag[0] == 1)
-                                lr_info = "Right ";
-                            else if(lr_flag[1] == 1)
-                                lr_info = "Left ";
-                            else
-                                lr_info = "Left Right is okay ";
-
-                            tts.speak(lr_info + "Up and down is okay", TextToSpeech.QUEUE_FLUSH, null, null);
-                        }
-                    }
-
-                    //좌우도 맞고 상하도 맞는 경우 ->  진동
-                    if (flagUpdown && flagLeftright) {
-                        final Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-                        vibrator.vibrate(500);
-
-                    }
-
-
-                    //찾고자 하는 물체가 프레임에 없는 경우
-                } else {
+                paint.setColor(Color.RED);
+                paintText.setColor(Color.RED); ///  final Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE); vibrator.vibrate(500);
+            } else {
+                if(detect == 1 && tts.isSpeaking() == false) {
+                    tts.speak("Target Disappeared", TextToSpeech.QUEUE_FLUSH, null, null);
                     paint.setColor(Color.BLUE);
                     paintText.setColor(Color.BLUE);
+                    detect = 0;
                 }
-
-
+            }
+            if(location != null) {
                 // Draw rect on canvas
                 canvas.drawRoundRect(location, 30, 30, paint);
 
@@ -429,10 +352,8 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
                 canvas.drawText(word, location.centerX(), location.bottom - 15, paintText);
             }
         }
-
         return bmp;
     }
-
 
     private boolean grantCameraPermission() {
         if (Build.VERSION.SDK_INT >= 23) {

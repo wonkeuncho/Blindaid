@@ -17,6 +17,7 @@ package cau.cse.capstone.blindaid.Main;
 
 import android.graphics.Bitmap;
 import android.graphics.RectF;
+
 import java.util.List;
 
 /**
@@ -43,7 +44,9 @@ public interface Classifier {
          */
         private final Float confidence;
 
-        /** Optional location within the source image for the location of the recognized object. */
+        /**
+         * Optional location within the source image for the location of the recognized object.
+         */
         private RectF location;
 
         public Recognition(
