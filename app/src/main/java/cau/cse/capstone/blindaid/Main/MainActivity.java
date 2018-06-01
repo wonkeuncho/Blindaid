@@ -42,6 +42,8 @@ import java.util.Locale;
 import cau.cse.capstone.blindaid.R;
 
 public class MainActivity extends Activity implements CvCameraViewListener2 {
+    public static int detect_count = 0;
+    public static boolean detect_state = false;
     private static final String TAG = "OCVSample::Activity";
     private CameraBridgeViewBase mOpenCvCameraView;
     private boolean mIsJavaCamera = true;
@@ -313,7 +315,11 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
                     guideText.setColor(Color.RED);
                     guideText.setTextSize(100);
                     canvas.drawText("Target Detect", 100, 900, guideText);
-
+                    if(detect_state == false && !tts.isSpeaking()){
+                        tts.speak("Target Detected", TextToSpeech.QUEUE_FLUSH, null, null);
+                    }
+                    detect_count = 0;
+                    detect_state = true;
                     paint.setColor(Color.RED);
                     paintText.setColor(Color.RED); ///  final Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE); vibrator.vibrate(500);
 
@@ -416,6 +422,18 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
 
                     //찾고자 하는 물체가 프레임에 없는 경우
                 } else {
+                    detect_count++;
+
+                    if(detect_count == 70){
+                        guideText.setColor(Color.RED);
+                        guideText.setTextSize(100);
+                        canvas.drawText("Target Disappear", 100, 900, guideText);
+                        if(!tts.isSpeaking()){
+                            tts.speak("Target Disappear", TextToSpeech.QUEUE_FLUSH, null, null);
+                        }
+                        detect_state = false;
+                        detect_count = 0;
+                    }
                     paint.setColor(Color.BLUE);
                     paintText.setColor(Color.BLUE);
                 }
