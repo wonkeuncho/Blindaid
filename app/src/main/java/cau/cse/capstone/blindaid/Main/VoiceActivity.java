@@ -81,7 +81,6 @@ public class VoiceActivity extends Activity {
                             Log.i("OnUtteranceProgresserListener", "onError");
                         }
                     });
-
                     tts.setLanguage(Locale.ENGLISH);
                     letUserSaying();
                 }
@@ -210,7 +209,12 @@ public class VoiceActivity extends Activity {
             Log.d(TAG, result.get(0));
 
             if (txtSpeechInput.getText().toString().equals("")) {
-                txtSpeechInput.setText(result.get(0).toString());
+                String result_str = "";
+                String[] temp = result.get(0).toString().split(" ");
+                for(int i = 0; i < temp.length; i++){
+                    result_str += temp[i];
+                }
+                txtSpeechInput.setText(result_str);
                 letUserCheckSaying();
 
             } else {
