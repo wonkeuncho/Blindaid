@@ -82,6 +82,7 @@ public class VoiceActivity extends Activity {
                         }
                     });
                     tts.setLanguage(Locale.ENGLISH);
+                    tts.setSpeechRate((float)0.9);
                     letUserSaying();
                 }
             }
@@ -127,11 +128,10 @@ public class VoiceActivity extends Activity {
 
     public int checkSpeech(String answer) {
         // if say yes
-        if (answer.equals("yes"))
+        if (answer.startsWith("y"))
             return 1;
-            // if say no
-
-        else if (answer.equals("no"))
+        // if say no
+        else if (answer.startsWith("n"))
             return 2;
 
         else
@@ -226,7 +226,7 @@ public class VoiceActivity extends Activity {
 
                     // Start MainActivity
                     Intent i = new Intent(VoiceActivity.this, MainActivity.class);
-                    i.putExtra("Text", txtSpeechInput.getText().toString());
+                    i.putExtra("Text", txtSpeechInput.getText().toString().toLowerCase());
                     startActivity(i);
                     finish();
                 } else if (opt == 2) {
