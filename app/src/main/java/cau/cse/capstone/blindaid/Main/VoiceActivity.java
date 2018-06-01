@@ -128,10 +128,10 @@ public class VoiceActivity extends Activity {
 
     public int checkSpeech(String answer) {
         // if say yes
-        if (answer.startsWith("y"))
+        if (answer.startsWith("y") || answer.startsWith("Y"))
             return 1;
         // if say no
-        else if (answer.startsWith("n"))
+        else if (answer.startsWith("n") || answer.startsWith("N"))
             return 2;
 
         else
@@ -214,7 +214,7 @@ public class VoiceActivity extends Activity {
                 for(int i = 0; i < temp.length; i++){
                     result_str += temp[i];
                 }
-                txtSpeechInput.setText(result_str);
+                txtSpeechInput.setText(result_str.toString().toLowerCase());
                 letUserCheckSaying();
 
             } else {

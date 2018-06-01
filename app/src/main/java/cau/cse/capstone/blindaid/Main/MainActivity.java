@@ -2,7 +2,6 @@ package cau.cse.capstone.blindaid.Main;
 
 import android.Manifest;
 import android.app.Activity;
-import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -15,7 +14,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.Vibrator;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.support.annotation.NonNull;
@@ -38,6 +36,7 @@ import org.opencv.core.Mat;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Vector;
 
 import cau.cse.capstone.blindaid.R;
 
@@ -52,6 +51,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     private Mat matInput;
     private Mat matResult;
     private Mat matLegacy;
+    private Vector<Classifier.Recognition> all_find = new Vector<>();
 
     private Size previewSize;
     private int rotation;
@@ -64,8 +64,8 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
 
     // Text to speech
     private TextToSpeech tts;
-    private int [] lr_flag = { 0 ,0 ,0 };
-    private int [] ud_flag = { 0, 0, 0};
+    private int[] lr_flag = {0, 0, 0};
+    private int[] ud_flag = {0, 0, 0};
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -117,6 +117,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
                         }
                     });
                     tts.setLanguage(Locale.ENGLISH);
+                    tts.setSpeechRate((float) 0.7);
                 }
             }
         });
@@ -289,16 +290,14 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
 
         paintText.setColor(Color.BLUE);
         paintText.setTextSize(50);
-
-
         drawCenter(canvas);
 
         List<Classifier.Recognition> mappedRecognitions = TensorFlowObjectDetectionAPIModel.getResults();
-
         if (mappedRecognitions == null) {
             return bmp;
         }
 
+        // Detected Object > 0
         if (mappedRecognitions.size() > 0) {
             for (Classifier.Recognition recognition : mappedRecognitions) {
                 final RectF location = recognition.getLocation();
@@ -315,7 +314,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
                     guideText.setColor(Color.RED);
                     guideText.setTextSize(100);
                     canvas.drawText("Target Detect", 100, 900, guideText);
-                    if(detect_state == false && !tts.isSpeaking()){
+                    if (detect_state == false && !tts.isSpeaking()) {
                         tts.speak("Target Detected", TextToSpeech.QUEUE_FLUSH, null, null);
                     }
                     detect_count = 0;
@@ -330,7 +329,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
                     if ((location.left > guideRight) || (location.left >= guideLeft && location.left <= guideRight && location.right > guideRight)) {
                         canvas.drawText("우", 100, 100, guideText);
                         flagLeftright = false;
-                        if(lr_flag[0] == 0 && !tts.isSpeaking()){
+                        if (lr_flag[0] == 0 && !tts.isSpeaking()) {
                             lr_flag[0] = 1;
                             lr_flag[1] = 0;
                             lr_flag[2] = 0;
@@ -339,7 +338,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
                     } else if ((location.right < guideLeft) || (location.right >= guideLeft && location.right <= guideRight && location.left < guideLeft)) {
                         canvas.drawText("좌", 100, 100, guideText);
                         flagLeftright = false;
-                        if(lr_flag[1] == 0 && !tts.isSpeaking()){
+                        if (lr_flag[1] == 0 && !tts.isSpeaking()) {
                             lr_flag[1] = 1;
                             lr_flag[0] = 0;
                             lr_flag[2] = 0;
@@ -349,7 +348,7 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
                     if (location.left < guideLeft && location.right > guideRight) {
                         canvas.drawText("좌우맞아", 100, 100, guideText);
                         flagLeftright = true;
-                        if(lr_flag[2] == 0 && !tts.isSpeaking()){
+                        if (lr_flag[2] == 0 && !tts.isSpeaking()) {
                             lr_flag[2] = 1;
                             lr_flag[0] = 0;
                             lr_flag[1] = 0;
@@ -361,14 +360,14 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
                     if ((location.top > guideBottom) || (location.top >= guideTop && location.top <= guideBottom && location.bottom > guideBottom)) {
                         canvas.drawText("하", 100, 200, guideText);
                         flagUpdown = false;
-                        if(ud_flag[0] == 0 && !tts.isSpeaking()){
+                        if (ud_flag[0] == 0 && !tts.isSpeaking()) {
                             ud_flag[0] = 1;
                             ud_flag[1] = 0;
                             ud_flag[2] = 0;
                             String lr_info;
-                            if(lr_flag[0] == 1)
+                            if (lr_flag[0] == 1)
                                 lr_info = "Right ";
-                            else if(lr_flag[1] == 1)
+                            else if (lr_flag[1] == 1)
                                 lr_info = "Left ";
                             else
                                 lr_info = "Left Right is okay ";
@@ -378,32 +377,32 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
                     } else if ((location.bottom < guideTop) || (location.bottom >= guideTop && location.bottom <= guideBottom && location.top < guideTop)) {
                         canvas.drawText("상", 100, 200, guideText);
                         flagUpdown = false;
-                        if(ud_flag[1] == 0 && !tts.isSpeaking()){
+                        if (ud_flag[1] == 0 && !tts.isSpeaking()) {
                             ud_flag[1] = 1;
                             ud_flag[0] = 0;
                             ud_flag[2] = 0;
                             String lr_info;
-                            if(lr_flag[0] == 1)
+                            if (lr_flag[0] == 1)
                                 lr_info = "Right";
-                            else if(lr_flag[1] == 1)
+                            else if (lr_flag[1] == 1)
                                 lr_info = "Left";
                             else
                                 lr_info = "Left Right is okay ";
 
-                            tts.speak(lr_info +"Up", TextToSpeech.QUEUE_FLUSH, null, null);
+                            tts.speak(lr_info + "Up", TextToSpeech.QUEUE_FLUSH, null, null);
                         }
                     }
                     if (location.top < guideTop && location.bottom > guideBottom) {
                         canvas.drawText("상하맞아", 100, 200, guideText);
                         flagUpdown = true;
-                        if(ud_flag[2] == 0 && !tts.isSpeaking()){
+                        if (ud_flag[2] == 0 && !tts.isSpeaking()) {
                             ud_flag[2] = 1;
                             ud_flag[0] = 0;
                             ud_flag[1] = 0;
                             String lr_info;
-                            if(lr_flag[0] == 1)
+                            if (lr_flag[0] == 1)
                                 lr_info = "Right ";
-                            else if(lr_flag[1] == 1)
+                            else if (lr_flag[1] == 1)
                                 lr_info = "Left ";
                             else
                                 lr_info = "Left Right is okay ";
@@ -412,45 +411,35 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
                         }
                     }
 
-                    //좌우도 맞고 상하도 맞는 경우 ->  진동
-                    if (flagUpdown && flagLeftright) {
-                        final Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-                        vibrator.vibrate(500);
-
-                    }
-
-
                     //찾고자 하는 물체가 프레임에 없는 경우
                 } else {
                     detect_count++;
 
-                    if(detect_count == 70){
+                    if (detect_count == 70) {
+                        detect_state = false;
+                        detect_count = 0;
                         guideText.setColor(Color.RED);
                         guideText.setTextSize(100);
                         canvas.drawText("Target Disappear", 100, 900, guideText);
-                        if(!tts.isSpeaking()){
+                        if (!tts.isSpeaking()) {
                             tts.speak("Target Disappear", TextToSpeech.QUEUE_FLUSH, null, null);
                         }
-                        detect_state = false;
-                        detect_count = 0;
                     }
                     paint.setColor(Color.BLUE);
                     paintText.setColor(Color.BLUE);
                 }
+                if (location != null) {
+                    // Draw rect on canvas
+                    canvas.drawRoundRect(location, 30, 30, paint);
 
-
-                // Draw rect on canvas
-                canvas.drawRoundRect(location, 30, 30, paint);
-
-                // Draw label on canvas
-                paintText.getTextBounds(word, 0, word.length(), bounds);
-                canvas.drawText(word, location.centerX(), location.bottom - 15, paintText);
+                    // Draw label on canvas
+                    paintText.getTextBounds(word, 0, word.length(), bounds);
+                    canvas.drawText(word, location.centerX(), location.bottom - 15, paintText);
+                }
             }
         }
-
         return bmp;
     }
-
 
     private boolean grantCameraPermission() {
         if (Build.VERSION.SDK_INT >= 23) {
@@ -470,7 +459,8 @@ public class MainActivity extends Activity implements CvCameraViewListener2 {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (Build.VERSION.SDK_INT >= 23) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
