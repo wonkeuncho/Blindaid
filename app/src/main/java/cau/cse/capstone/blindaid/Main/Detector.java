@@ -92,8 +92,10 @@ public class Detector {
                 if(line.compareTo(target) == 0){
                     Log.i("Textfile line : ", line);
                     // Model file trained by ImageNet Fruits for Mobile Ver.
+                    /*TF_OD_API_MODEL_FILE =
+                            "file:///android_asset/fruit_model.pb";*/
                     TF_OD_API_MODEL_FILE =
-                            "file:///android_asset/fruit_model.pb";
+                            "file:///android_asset/test.pb";
                     // Label file matched with Model file
                     TF_OD_API_LABELS_FILE =
                             "file:///android_asset/fruit_labels_list.txt";
