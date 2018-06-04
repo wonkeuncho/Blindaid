@@ -1,6 +1,5 @@
 # Blindaid
-# Capstone Project
-# Realtime Processing for Andriod OS
-# for Blind
-# 
+# Capstone Project(Chung-Ang Univ)
+Realtime Processing for Andriod OS
+for Blind
 # Dataset : Office Supplies, fruitset
