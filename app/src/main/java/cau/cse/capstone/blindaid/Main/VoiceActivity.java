@@ -106,8 +106,7 @@ public class VoiceActivity extends Activity {
                 return true;
             } else {
                 Log.v(TAG, "Permission is revoked");
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 1);
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, 1);
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO}, 1);
                 return false;
             }
         } else {
@@ -121,6 +120,10 @@ public class VoiceActivity extends Activity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (Build.VERSION.SDK_INT >= 23) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.v(TAG, "Permission: " + permissions[0] + "was " + grantResults[0]);
+                //resume tasks needing this permission
+            }
+            if (grantResults[1] == PackageManager.PERMISSION_GRANTED) {
                 Log.v(TAG, "Permission: " + permissions[0] + "was " + grantResults[0]);
                 //resume tasks needing this permission
             }
