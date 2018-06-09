@@ -107,6 +107,7 @@ public class VoiceActivity extends Activity {
             } else {
                 Log.v(TAG, "Permission is revoked");
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 1);
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, 1);
                 return false;
             }
         } else {
